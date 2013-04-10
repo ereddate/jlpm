@@ -1,5 +1,5 @@
 _$().config({
-  help: {
+	help: {
 		browser: "浏览器识别 \r\n _$().browser.firefox([true]); \r\n 参数：true 返回版本号 \r\n 返回 true|false",
 		cache:"本地存储 localStorage 设置 \r\n _$().cache(key,value); \r\n 参数 value 为空，返回对应的值。key 为空，返回长度。key 为数字，返回索引对应的名称。全不为空，设置对应的值。",
 		cacheRemove:"本地存储 localStorage 删除 \r\n _$().cacheRemove(key); \r\n 参数 key 为空，清空。不为空，删除指定项值。",
@@ -7,6 +7,11 @@ _$().config({
 		events: "简易事件 \r\n _$(selector).click(function(){});",
 		os: "系统识别 \r\n _$().os.chromeos([true]); \r\n 参数：true 返回版本号 \r\n 返回 true|false",
 		ver: "框架内部版本 \r\n _$().ver",
+		ajax:{
+			get:'ajax get方法 \r\n _$(selector).Ajax([{oninit:function(){console.log(data);return {status:true,info:"测试错误"};},...}]).get([""]); \r\n []内为可选参数',
+			post:'ajax post方法 \r\n _$(selector).Ajax([{oninit:function(){console.log(data);return {status:true,info:"测试错误"};},...}]).post([""]); \r\n []内为可选参数'
+		},
+		jsonp: "jsonp调用 \r\n _$().jsonp(url,function(){},{id:id,oncomplete:function(){});",
 		addClass: "追加CLASS类 \r\n _$(selector).addClass('classname classname ...'); \r\n 参数支持空格多名",
 		after: "当前标签后插入 \r\n _$(selector).after(element);", 
 		append: "当前标签内追加 \r\n _$(selector).append(element);",
@@ -29,6 +34,7 @@ _$().config({
 		each: "循环,类似于for循环 \r\n _$(selector).each([array|object,]function(){});",
 		empty: "清空标签中的子标签 \r\n _$(selector).empty();",
 		extend: "jlpm扩展功能 \r\n _$().extend(function(){},name); 或 _$().extend({aaa:function(){}});",
+		elems:"获取当前标签的同父下一个标签和上一个标签及所有标签、标签内第一个标签和最后一个标签及所有标签、所有父标签 \r\n _$(selector).elems([selector]).parents; \r\n 返回标签或标签集",
 		first: "取标签中的第一个标签 \r\n _$(selector).first();",
 		gWin: "获取标签的window \r\n _$(selector).gWin();",
 		get: "获取对象中符合条件的子对象 \r\n _$(selector).get(0); 或 _$(selector).get(selector);",
@@ -67,7 +73,6 @@ _$().config({
 		isString: "是否为字符串 \r\n _$().isString(value); \r\n 返回 true|false",
 		isVisible: "是否为显示 \r\n _$().isVisible(value); \r\n 返回 true|false",
 		isWin: "是否为window \r\n _$().isWin(value); \r\n 返回 true|false",
-		jsonp: "jsonp调用 \r\n _$().jsonp(url,function(){},{id:id,oncomplete:function(){});",
 		keys: "枚举出的属性的列表 \r\n _$(selector).keys();",
 		last: "获取标签内最后的子标签 \r\n _$(selector).last();",
 		left: "获取对象的LEFT值 \r\n _$(selector).left();",
