@@ -1,5 +1,5 @@
 ;(function(win) {
-  var doc = win.document,
+	var doc = win.document,
 		_toString = Object.prototype.toString,
 		hasOwn = Object.prototype.hasOwnProperty,
 		docEle = doc.documentElement,
@@ -112,6 +112,7 @@
 				this.record(noldElement, nelem, doc, null);
 				return this;
 			}
+			var elem;
 			if (this.isString(selector)) {
 				if ( !! this.Doms[selector] && !content) {
 					elem = this.Doms[selector];
@@ -650,8 +651,29 @@
 			return elements;
 		}
 	});
+
+	var ajaxLocation;
+	try {
+		ajaxLocation = location.href;
+	} catch(e) {
+		// Use the href attribute of an A element
+		// since IE will modify it given document.location
+		ajaxLocation = document.createElement("a");
+		ajaxLocation.href = "";
+		ajaxLocation = ajaxLocation.href;
+	}
+
+	// Segment location into parts
+	jlpm.fn.ajaxLocParts = jlpm.fn.sMatch.rurl.exec(ajaxLocation.toLowerCase()) || [];
 	//类型判断
 	jlpm.extend({
+        isCdomain: function(value) { //是否跨域
+            var parts = this.sMatch.rurl.exec(value.toLowerCase());
+            return !!(parts && (parts[1] != this.ajaxLocParts[1] || parts[2] != this.ajaxLocParts[2] || (parts[3] || (parts[1] === "http:" ? 80 : 443)) != (this.ajaxLocParts[3] || (this.ajaxLocParts[1] === "http:" ? 80 : 443))));
+        },
+        isLocal: function() { //是否本地
+            return this.sMatch.rlocalProtocol.test(this.ajaxLocParts[1]);
+        },
 		isNative: function(fn) { //方法或函数是否本地所有
 			return this.sMatch.rnative.test(fn + "");
 		},
@@ -1367,6 +1389,31 @@
 	});
 	//文本
 	jlpm.extend({
+        readXmlNode: function(item, node, parent) {
+            var m = item ? item : "item",
+                sm = node ? node.split(' ') : "",
+                rp = parent ? parent : doc,
+                xmlnodev = {},
+                self = this;
+            this.domFind(m, rp).each(function() {
+                var gm = this.children;
+                if (gm != undefined) {
+                    self.each(gm, function(i) {
+                        var tag = this;
+                        if (sm == "") {
+                            xmlnodev[this.tagName] = tag.textContent ? tag.textContent : tag.xml ? tag.xml.indexOf("<![CDATA[") > -1 ? tag.xml.replace(new RegExp("<" + this.tagName + "><!\\[CDATA\\[|\\]\\]><\/" + this.tagName + ">", "g"), "") : tag.xml.replace(new RegExp("<" + this.tagName + ">|<\/" + this.tagName + ">", "g"), "") : "";
+                        } else {
+                            self.each(sm, function() {
+                                if (this == tag.tagName) {
+                                    xmlnodev[this] = tag.textContent ? tag.textContent : tag.xml ? tag.xml.indexOf("<![CDATA[") > -1 ? tag.xml.replace(new RegExp("<" + this + "><!\\[CDATA\\[|\\]\\]><\/" + this + ">", "g"), "") : tag.xml.replace(new RegExp("<" + this + ">|<\/" + this + ">", "g"), "") : "";
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            return this.record(this[0],xmlnodev,rp,xmlnodev.length);
+        },
 		split: function(str, fstr, num) {
 			return (str.indexOf(fstr) > -1) ? ((num != null) ? str.split(fstr)[num] : str.split(fstr)) : str;
 		},
@@ -2633,6 +2680,226 @@
 			return this.inArray(value, data) > -1 ? true : false;
 		}
 	});
+	//ajax
+	jlpm.extend(function(options){
+		var jlpm = this,
+			ajax = function(options){
+				return new ajax.fn.init(options);
+			},
+			standardXHR=function(){
+		        try {
+		            return new win.XMLHttpRequest();
+		        } catch (e) {
+		            return false;
+		        }
+			},
+			activeXHR=function(){
+				var versions = ajax.fn.defaultXHR;
+				while (versions.length > 0) {
+					try {
+						return new ActiveXObject(versions[0]);
+					} catch (ex) {
+						versions.shift();
+					}
+				}
+			};
+		ajax.fn = ajax.prototype = {
+			constructor:ajax,
+			init:function(options){
+				this.options = options;
+				return this._init();
+			},
+			defaultHeaders: {
+				'Content-type': 'application/x-www-form-urlencoded UTF-8', //最常用配置
+				'X-Requested-With':'XMLHttpRequest'
+			},
+			defaultXHR:["Msxml4.XMLHttp","Msxml3.XMLHttp","Msxml2.XMLHttp","Microsoft.XMLHttp",'MSXML2.XMLHttp.6.0', 'MSXML2.XMLHttp.3.0', 'MSXML2.XMLHttp.5.0', 'MSXML2.XMLHttp.4.0'],
+			_init:function(){
+				this.config = {};
+				this.config.xhr = this.xhr = win.ActiveXObject ? (!jlpm.isLocal() && standardXHR() || activeXHR()) : standardXHR();
+				this.config.url = this.url= '';
+				this.config.method = this.method= 'get';
+				this.config.async = this.async= true;
+				this.config.user = this.user= '';
+				this.config.pwd = this.pwd= '';
+				this.config.requestHeaders = this.requestHeaders= null;
+				this.config.isJson = this.isJson = true,
+				this.config.data = this.data= '';
+				this.config.timeout = this.timeout = 30000;
+				this.config.oninit = this.oninit = function(data){return {status:true,info:undefined};};
+				this.config.onerror = this.onerror = function(info){
+					try{
+						console.log(info ? info : "err!");
+					}catch(e){
+						alert(info ? info : "err!");
+					}
+				};
+				this.config.onsucceed = this.onsucceed = function(){};
+				this.config.oncomplete = this.oncomplete = function(response,status){
+					console.log(response);
+				};
+				jlpm.extend(this.options,this);
+				jlpm.extend(this.options,this.config);
+				this.requestHeaders = jlpm.extend(this.requestHeaders||{},this.defaultHeaders);
+				return this;
+			},
+			_sto: function(callback, time) {
+				clearTimeout(this.ajaxTimeout);
+				this.ajaxTimeout = setTimeout(callback, time);
+			},
+			_readyStateChange:function(callback){
+				var self = this;
+				callback = callback ? callback : this.oncomplete;
+				self.config.oncomplete = callback;
+				if (typeof callback == "string"){
+					return;
+				}
+				//console.log(self.xhr.readyState+","+self.xhr.status+",responseText:"+self.xhr.responseText)
+				if (self.xhr.readyState == 0&&self.options&&self.options.oninit){
+					self.options.oninit();
+				}
+				if (self.xhr.readyState == 2&&self.options&&self.options.onsucceed){
+					self.options.onsucceed();
+				}
+				if (self.xhr.readyState == 4){
+					self.xhr.onreadystatechange = null;
+	                var status = (self.xhr.status) ? parseFloat(self.xhr.status) || 0 : 0;
+	                if (status === 1223) {
+	                    status = 204;
+	                }
+	                if (status >= 200 && status < 300 || status == 304) {
+	                	callback({responseText:(this.isJson ? (function(){
+	            			try{
+	                			return eval("("+self.xhr.responseText+")");
+	                		}catch(e){
+	                			return e.message;
+	                		}
+	            		})() : self.xhr.responseText)},"ok");
+	                }else{
+	                	callback("","err");
+	                }
+				}
+			},
+			formtojson:function(data){
+				var elems = [];
+				jlpm.domFind(data).children().each(function(i,el){
+					var name = el.name;
+					if (el.disabled || !name ) {return true;}
+					switch (el.type) {
+						case "text":
+						case "hidden":
+						case "password":
+						case "textarea":
+							elems.push(encodeURIComponent(name)+"="+encodeURIComponent(el.value));
+							break;
+						case "radio":
+						case "checkbox":
+							if (el.checked) {elems.push(encodeURIComponent(name)+"="+encodeURIComponent(el.value));}
+							break;
+						case "select-one":
+							if (el.selectedIndex > -1) {elems.push(encodeURIComponent(name)+"="+encodeURIComponent(el.value));}
+							break;
+						case "select-multiple":
+							var opts = el.options;
+							for (var j = 0; j < opts.length; ++j) {
+								if (opts[j].selected) {elems.push(encodeURIComponent(name)+"="+encodeURIComponent(opts[j].value));}
+							}
+							break;
+					}
+				});
+				return elems.join('&');
+			},
+			tojson:function(data){
+				var elems = [];
+				jlpm.domFind(data).each(function(name,value){
+					if (jlpm.isEmpty(value)) value = "";
+					if (jlpm.isArray(data[name])) {
+						jlpm.domFind(data[name]).each(function(i,svalue){
+							elems.push(encodeURIComponent(name)+"="+encodeURIComponent(svalue));
+						});
+					}else{
+						elems.push(encodeURIComponent(name)+"="+encodeURIComponent(value));
+					}
+				});
+				return elems.join('&');
+			},
+			stringtojson:function(data){
+				var elems = {};
+				jlpm.domFind(data.split('&')).each(function(i,obj){
+					var array = obj.split('='),
+						value = !array[1] ? "" : array[1];
+					elems[array[0]] = value;
+				});
+				return elems;
+			},
+			send:function(url, method, data, callback){
+				var self = this;
+				url = url ? url : self.url;
+				url = url.split('#')[0];
+				method = method ? method : self.method;
+				data = data ? data : jlpm.isEmpty(self.data) ? jlpm.isEmpty(jlpm[0]) ? self.data : jlpm[0] : jlpm[0];
+				if (typeof data == "string" && method != 'post') {
+					url += (url.indexOf('?') != -1 ? '&' : '?') + data;
+				}
+				if (typeof data == "object"){
+					data = data.tagName&&data.tagName.toLowerCase()=="form" ? self.formtojson(data) : self.tojson(data);
+				}
+				var newConfig = {
+					url:url,
+					method:method,
+					data:data
+				},
+				result = self.oninit(self.stringtojson(data));
+				if (result.status&&!jlpm.isCdomain(url)){
+					jlpm.extend(newConfig,self.config);
+					var id = jlpm._ajaxID+1;
+					if (typeof data == "string" && method != 'post') {
+						url += (url.indexOf('?') != -1 ? '&' : '?') + "ajaxid=jlpm_ajax"+id;
+						self.config.url = url;
+					}
+					jlpm.ajaxhandlers["jlpm_ajax"+id] = self.config;
+					jlpm.ajaxhandlers._count +=1;
+					self.user ? self.xhr.open(method,url,self.async,self.user,self.pwd) : self.xhr.open(method,url,self.async);
+					for (var i in self.requestHeaders) {
+						self.xhr.setRequestHeader(i, self.requestHeaders[i]);
+					}
+					self.xhr.onreadystatechange = function(){
+						self._readyStateChange(callback);
+					};
+					if (self.async) {
+						self._sto(function(){
+							self.cancel("timeout");
+						},self.timeout);
+						data&&method!="get" ? self.xhr.send(data) : self.xhr.send();
+					}else{
+
+					}
+				}else{
+					self.onerror(jlpm.isCdomain(url) ? "cross domain error!" :result.info);
+				}
+			},
+			isWork: function() {
+				var state = this.xhr ? this.xhr.readyState : 0;
+				return state > 0 && state < 4;
+			},
+			cancel:function(info){
+				if (this.xhr&&this.isWork()){
+					this.xhr.abort();
+					this._readyStateChange(info);
+					return true;
+				}
+				return false;
+			},
+			get:function(url,data,callback){
+				this.send(url,"get",data,callback);
+			},
+			post:function(url,data,callback){
+				this.send(url,"post",data,callback);
+			}
+		};
+		ajax.fn.init.prototype = ajax.fn;
+		return ajax(options);
+	},"Ajax");
 	//localStorage
 	jlpm.extend({
 		cacheHname: location.hostname ? location.hostname : 'localStorage_jlpm',
@@ -3018,7 +3285,7 @@
 				a.push(self.eq(/0/.test(i + "") ? 0 : (self.children(m)[0] ? self.children(m)[0].length - 1 : 0), self.children(m)[0]));
 			} else {
 				this.each(m, function(obj) {
-					a.push(self.eq(/0/.test(i + "") ? 0 : self.length - 1, obj));
+					a.push(self.eq(/0/.test(i + "") ? 0 : (self.children(obj)[0] ? self.children(obj)[0].length - 1 : 0), obj));
 				});
 			}
 			if (this.isSingle(a)) a = a[0];
@@ -3040,6 +3307,26 @@
 			height: height || 0,
 			top: top || 0,
 			left: left || 0
+		};
+	};
+	//取对象的同父下一个标签和上一个标签及所有标签、标签内第一个标签和最后一个标签及所有标签、所有父标签
+	jlpm.fn.elems = function(selector,m){
+		var m = m ? m : this[0],
+			next = this.domFind(m).next()[0],
+			prev = this.domFind(m).prev()[0],
+			first = this.domFind(m).first()[0],
+			last = this.domFind(m).last()[0],
+			siblings = this.domFind(m).siblings()[0],
+			children = this.domFind(m).children()[0],
+			parents = selector ? this.domFind(m).parents(selector)[0] : this.domFind(m).parents()[0];
+		return {
+			next:next,
+			prev:prev,
+			first:first,
+			last:last,
+			siblings:siblings,
+			children:children,
+			parents:parents
 		};
 	};
 
