@@ -1,5 +1,5 @@
 (function(win) {
-  var class2type = {},
+	var class2type = {},
 	_toString = Object.prototype.toString,
 		_hasOwn = Object.prototype.hasOwnProperty,
 		getType = function(obj) {
@@ -222,12 +222,12 @@
 		},
 		css3animate = function(self, obj, ani, callback) {
 			var obj = getType(obj) == "string" ? _$(obj)[0] : obj,
-				cssPrefix = _$().browser.webkit()||_$().browser.chrome()||_$().browser.safari() ? "Webkit" : _$().browser.firefox() ? "Moz" : _$().browser.msie() ? "ms" : _$().browser.opera() ? "O" : "",
+				cssPrefix = _$().browser.webkit()||_$().browser.chrome()||_$().browser.chromemobile()||_$().browser.safari()||_$().browser.safarimobile() ? "Webkit" : _$().browser.firefox()||_$().browser.firefoxmobile() ? "Moz" : _$().browser.msie() ? "ms" : _$().browser.opera() ? "O" : "",
 				translateOpen = !_$().browser.opera() ? "3d(" : "(",
 				translateClose = !_$().browser.opera() ? ",0)" : ")",
 				transitionEnd = cssPrefix.replace(/-/g, "") + "TransitionEnd",
 				timeNum = parseFloat(ani["time"]);
-			transitionEnd = (_$().browser.firefox() || cssPrefix == "" || _$().browser.msie()) ? "transitionend" : transitionEnd;
+		transitionEnd = (_$().browser.firefox() || _$().browser.firefoxmobile() || cssPrefix == "" || _$().browser.msie()) ? "transitionend" : transitionEnd;
 			transitionEnd = transitionEnd.replace(transitionEnd.charAt(0), transitionEnd.charAt(0).toLowerCase());
 			if (timeNum == 0) ani["time"] = 0;
 			if (!ani["y"]) ani["y"] = 0;
