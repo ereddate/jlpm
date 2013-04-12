@@ -1,4 +1,5 @@
-;(function(win) {
+;
+(function(win) {
 	var doc = win.document,
 		_toString = Object.prototype.toString,
 		hasOwn = Object.prototype.hasOwnProperty,
@@ -112,7 +113,6 @@
 				this.record(noldElement, nelem, doc, null);
 				return this;
 			}
-			var elem;
 			if (this.isString(selector)) {
 				if ( !! this.Doms[selector] && !content) {
 					elem = this.Doms[selector];
@@ -655,7 +655,7 @@
 	var ajaxLocation;
 	try {
 		ajaxLocation = location.href;
-	} catch(e) {
+	} catch (e) {
 		// Use the href attribute of an A element
 		// since IE will modify it given document.location
 		ajaxLocation = document.createElement("a");
@@ -667,13 +667,13 @@
 	jlpm.fn.ajaxLocParts = jlpm.fn.sMatch.rurl.exec(ajaxLocation.toLowerCase()) || [];
 	//类型判断
 	jlpm.extend({
-        isCdomain: function(value) { //是否跨域
-            var parts = this.sMatch.rurl.exec(value.toLowerCase());
-            return !!(parts && (parts[1] != this.ajaxLocParts[1] || parts[2] != this.ajaxLocParts[2] || (parts[3] || (parts[1] === "http:" ? 80 : 443)) != (this.ajaxLocParts[3] || (this.ajaxLocParts[1] === "http:" ? 80 : 443))));
-        },
-        isLocal: function() { //是否本地
-            return this.sMatch.rlocalProtocol.test(this.ajaxLocParts[1]);
-        },
+		isCdomain: function(value) { //是否跨域
+			var parts = this.sMatch.rurl.exec(value.toLowerCase());
+			return !!(parts && (parts[1] != this.ajaxLocParts[1] || parts[2] != this.ajaxLocParts[2] || (parts[3] || (parts[1] === "http:" ? 80 : 443)) != (this.ajaxLocParts[3] || (this.ajaxLocParts[1] === "http:" ? 80 : 443))));
+		},
+		isLocal: function() { //是否本地
+			return this.sMatch.rlocalProtocol.test(this.ajaxLocParts[1]);
+		},
 		isNative: function(fn) { //方法或函数是否本地所有
 			return this.sMatch.rnative.test(fn + "");
 		},
@@ -879,9 +879,9 @@
 		},
 		replaceText: function(text, reallyDo, replaceWith, ignoreCase) { //替换文本
 			return text.replace(((!RegExp.prototype.isPrototypeOf(reallyDo)) ? new RegExp(reallyDo, (ignoreCase ? "gi" : "g")) : reallyDo), replaceWith);
-		}
-		/*parseJSON: function(data) { //生成JSON
-			var data = data ? data :this[0];
+		},
+		parseJSON: function(data) { //生成JSON
+			var data = data ? data : this[0];
 			if (typeof data !== "string" || !data) {
 				return null;
 			}
@@ -899,8 +899,8 @@
 				return (new Function("return " + data))();
 			}
 			//alert( "Invalid JSON: " + data );
-		},
-		parseXML: function(data, xml, tmp) { //生成XML
+		}
+		/*parseXML: function(data, xml, tmp) { //生成XML
 			var data = data ?  data : this[0]
 			if (win.DOMParser) { // Standard
 				tmp = new DOMParser();
@@ -1226,24 +1226,14 @@
 				}
 			} else {
 				var va = t.split(" ");
-				this.each(va, function(i) {
-					var vname = this;
-					self.each(m, function() {
-						var id = this._eventID,
-							that = this;
-						if (self.eventHandlers[id + "_" + i]) {
-							var fn = self.eventHandlers[id + "_" + i].s;
-							try {
-								fn.call(this);
-							} catch (e) {
-								self.evtError[id + "_" + vname] = {
-									dom: that,
-									id: that._domID ? that._domID : null,
-									fn: fn,
-									info: "javascript error\nlabel id:" + (that._domID ? that._domID : null) + "\nevent type:" + vt + "\ntype of error:" + e.name + "\nsummary:\n" + e.message
-								};
-								self.sAlert.call(that, vname);
-							}
+				this.each(va, function(i, name) {
+					var vname = name;
+					self.each(m, function(i, obj) {
+						var id = obj._eventID,
+							that = obj;
+						if (self.eventHandlers[id + "_" + vname]) {
+							var fn = self.eventHandlers[id + "_" + vname].s;
+							if (!self.isEmpty(fn) && self.isFunction(fn)) fn.call(obj);
 						}
 					});
 				});
@@ -1286,19 +1276,23 @@
 			return this;
 		},
 		stopPropagation: function(event) {
+			var e = event.originalEvent;
+			if (!e) return;
 			if (this.browser.msie()) {
-				event.cancelBubble = true; // ie下阻止冒泡
+				e.cancelBubble = true; // ie下阻止冒泡
 			} else {
-				event.stopPropagation(); // 其它浏览器下阻止冒泡
+				e.stopPropagation(); // 其它浏览器下阻止冒泡
 			}
 		},
 		preventDefault: function(event, result) {
-			if ((result === undefined || result === false) && event.preventDefault) {
-				event.preventDefault();
-			} else if (event.preventDefault) {
-				event.preventDefault();
+			var e = event.originalEvent;
+			if (!e) return;
+			if ((result === undefined || result === false) && e.preventDefault) {
+				e.preventDefault();
+			} else if (e.preventDefault) {
+				e.preventDefault();
 			} else {
-				event.returnValue = false;
+				e.returnValue = false;
 			}
 		},
 		jlmid: function(elem) {
@@ -1311,18 +1305,8 @@
 				delegate = getDelegate || getDelegate(fn, event),
 				callback = delegate || fn,
 				proxyfn = function(event) {
-					try {
-						var result = callback.apply(element, [event].concat(event.data));
-						return result;
-					} catch (e) {
-						self.evtError[id + "_" + evtname] = {
-							dom: element,
-							id: id,
-							fn: fn,
-							info: "javascript error\nlabel id:" + id + "\nevent type:" + evtname + "\ntype of error:" + e.name + "\nsummary:\n" + e.message
-						};
-						self.sAlert.call(element, evtname);
-					}
+					var result = callback.apply(element, [event].concat(event.data));
+					return result;
 				};
 			var handler = {
 				e: element,
@@ -1389,31 +1373,31 @@
 	});
 	//文本
 	jlpm.extend({
-        readXmlNode: function(item, node, parent) {
-            var m = item ? item : "item",
-                sm = node ? node.split(' ') : "",
-                rp = parent ? parent : doc,
-                xmlnodev = {},
-                self = this;
-            this.domFind(m, rp).each(function() {
-                var gm = this.children;
-                if (gm != undefined) {
-                    self.each(gm, function(i) {
-                        var tag = this;
-                        if (sm == "") {
-                            xmlnodev[this.tagName] = tag.textContent ? tag.textContent : tag.xml ? tag.xml.indexOf("<![CDATA[") > -1 ? tag.xml.replace(new RegExp("<" + this.tagName + "><!\\[CDATA\\[|\\]\\]><\/" + this.tagName + ">", "g"), "") : tag.xml.replace(new RegExp("<" + this.tagName + ">|<\/" + this.tagName + ">", "g"), "") : "";
-                        } else {
-                            self.each(sm, function() {
-                                if (this == tag.tagName) {
-                                    xmlnodev[this] = tag.textContent ? tag.textContent : tag.xml ? tag.xml.indexOf("<![CDATA[") > -1 ? tag.xml.replace(new RegExp("<" + this + "><!\\[CDATA\\[|\\]\\]><\/" + this + ">", "g"), "") : tag.xml.replace(new RegExp("<" + this + ">|<\/" + this + ">", "g"), "") : "";
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-            return this.record(this[0],xmlnodev,rp,xmlnodev.length);
-        },
+		readXmlNode: function(item, node, parent) {
+			var m = item ? item : "item",
+				sm = node ? node.split(' ') : "",
+				rp = parent ? parent : doc,
+				xmlnodev = {},
+				self = this;
+			this.domFind(m, rp).each(function() {
+				var gm = this.children;
+				if (gm != undefined) {
+					self.each(gm, function(i) {
+						var tag = this;
+						if (sm == "") {
+							xmlnodev[this.tagName] = tag.textContent ? tag.textContent : tag.xml ? tag.xml.indexOf("<![CDATA[") > -1 ? tag.xml.replace(new RegExp("<" + this.tagName + "><!\\[CDATA\\[|\\]\\]><\/" + this.tagName + ">", "g"), "") : tag.xml.replace(new RegExp("<" + this.tagName + ">|<\/" + this.tagName + ">", "g"), "") : "";
+						} else {
+							self.each(sm, function() {
+								if (this == tag.tagName) {
+									xmlnodev[this] = tag.textContent ? tag.textContent : tag.xml ? tag.xml.indexOf("<![CDATA[") > -1 ? tag.xml.replace(new RegExp("<" + this + "><!\\[CDATA\\[|\\]\\]><\/" + this + ">", "g"), "") : tag.xml.replace(new RegExp("<" + this + ">|<\/" + this + ">", "g"), "") : "";
+								}
+							});
+						}
+					});
+				}
+			});
+			return this.record(this[0], xmlnodev, rp, xmlnodev.length);
+		},
 		split: function(str, fstr, num) {
 			return (str.indexOf(fstr) > -1) ? ((num != null) ? str.split(fstr)[num] : str.split(fstr)) : str;
 		},
@@ -1866,17 +1850,19 @@
 					return true;
 				} else if (this.isEmpty(value)) {
 					this.each(names, function(i, name) {
-						var vnvalue = (name.indexOf("data-") === 0) ? self._dataAttr(m, self.camelCase(name.substring(5))) : m[self.propfx[name] || name];
+						var vnvalue = (/data\-/.test(name)) ? self._dataAttr(m, self.camelCase(name.substring(5))) : m[self.propfx[name] || name];
 						vnvalue = !self.isEmpty(vnvalue) ? vnvalue : typeof m.getAttribute != "undefined" ? m.getAttribute(name) : null;
-						//vnvalue = (vnvalue == null) ? m.getAttribute(name) : (vnvalue != "") ? vnvalue : m.getAttribute(name);
 						if (vnvalue == null && /value/.test(name)) {
 							vnvalue = self.textValue(m);
 						}
-						if (vnvalue) {
+						if (vnvalue && !self.isSingle(names)) {
 							values.push(vnvalue);
+						} else {
+							values = vnvalue;
+							return false;
 						}
 					});
-					return this.isEmptyObject(values) ? undefined : values;
+					return this.isEmpty(values) ? undefined : values;
 				}
 			} else {
 				this.each(name, function(name, value) {
@@ -1895,20 +1881,10 @@
 			this.each(m, function(i, obj) {
 				var nType = obj.nodeType;
 				if (obj && nType != 3 && nType != 8 && nType != 2) {
-					result = self._getAttr(name, value, m);
-					if (result != true) {
-						if (result != undefined) {
-							values.push(result);
-						} else {
-							values = undefined;
-						}
-						result = false;
-					}
+					values.push(self._getAttr(name, value, obj));
 				}
 			});
-			return result == true ? this : values;
-			//return returnValue(name, value, bool, m ? m : this[0]);
-			//return this._getAttr(name, value, bool, m);
+			return typeof value != "undefined" ? this : values;
 		},
 		_removeAttr: function(m, name) {
 			var propName, attrs,
@@ -2681,19 +2657,19 @@
 		}
 	});
 	//ajax
-	jlpm.extend(function(options){
+	jlpm.extend(function(options) {
 		var jlpm = this,
-			ajax = function(options){
-				return new ajax.fn.init(options);
+			ajax = function(options) {
+				return ajax.fn.init(options);
 			},
-			standardXHR=function(){
-		        try {
-		            return new win.XMLHttpRequest();
-		        } catch (e) {
-		            return false;
-		        }
+			standardXHR = function() {
+				try {
+					return new win.XMLHttpRequest();
+				} catch (e) {
+					return false;
+				}
 			},
-			activeXHR=function(){
+			activeXHR = function() {
 				var versions = ajax.fn.defaultXHR;
 				while (versions.length > 0) {
 					try {
@@ -2704,135 +2680,150 @@
 				}
 			};
 		ajax.fn = ajax.prototype = {
-			constructor:ajax,
-			init:function(options){
+			constructor: ajax,
+			init: function(options) {
 				this.options = options;
 				return this._init();
 			},
 			defaultHeaders: {
 				'Content-type': 'application/x-www-form-urlencoded UTF-8', //最常用配置
-				'X-Requested-With':'XMLHttpRequest'
+				'X-Requested-With': 'XMLHttpRequest'
 			},
-			defaultXHR:["Msxml4.XMLHttp","Msxml3.XMLHttp","Msxml2.XMLHttp","Microsoft.XMLHttp",'MSXML2.XMLHttp.6.0', 'MSXML2.XMLHttp.3.0', 'MSXML2.XMLHttp.5.0', 'MSXML2.XMLHttp.4.0'],
-			_init:function(){
+			defaultXHR: ["Msxml4.XMLHttp", "Msxml3.XMLHttp", "Msxml2.XMLHttp", "Microsoft.XMLHttp", 'MSXML2.XMLHttp.6.0', 'MSXML2.XMLHttp.3.0', 'MSXML2.XMLHttp.5.0', 'MSXML2.XMLHttp.4.0'],
+			_init: function() {
 				this.config = {};
 				this.config.xhr = this.xhr = win.ActiveXObject ? (!jlpm.isLocal() && standardXHR() || activeXHR()) : standardXHR();
-				this.config.url = this.url= '';
-				this.config.method = this.method= 'get';
-				this.config.async = this.async= true;
-				this.config.user = this.user= '';
-				this.config.pwd = this.pwd= '';
-				this.config.requestHeaders = this.requestHeaders= null;
+				this.config.url = this.url = '';
+				this.config.method = this.method = 'get';
+				this.config.async = this.async = true;
+				this.config.user = this.user = '';
+				this.config.pwd = this.pwd = '';
+				this.config.requestHeaders = this.requestHeaders = null;
 				this.config.isJson = this.isJson = true,
-				this.config.data = this.data= '';
+				this.config.data = this.data = '';
 				this.config.timeout = this.timeout = 30000;
-				this.config.oninit = this.oninit = function(data){return {status:true,info:undefined};};
-				this.config.onerror = this.onerror = function(info){
-					try{
+				this.config.oninit = this.oninit = function(data) {
+					return {
+						status: true,
+						info: undefined
+					};
+				};
+				this.config.onerror = this.onerror = function(info) {
+					try {
 						console.log(info ? info : "err!");
-					}catch(e){
+					} catch (e) {
 						alert(info ? info : "err!");
 					}
 				};
-				this.config.onsucceed = this.onsucceed = function(){};
-				this.config.oncomplete = this.oncomplete = function(response,status){
+				this.config.onsucceed = this.onsucceed = function() {};
+				this.config.oncomplete = this.oncomplete = function(response, status) {
 					console.log(response);
 				};
-				jlpm.extend(this.options,this);
-				jlpm.extend(this.options,this.config);
-				this.requestHeaders = jlpm.extend(this.requestHeaders||{},this.defaultHeaders);
+				jlpm.extend(this.options, this);
+				jlpm.extend(this.options, this.config);
+				this.requestHeaders = jlpm.extend(this.requestHeaders || {}, this.defaultHeaders);
 				return this;
 			},
 			_sto: function(callback, time) {
 				clearTimeout(this.ajaxTimeout);
 				this.ajaxTimeout = setTimeout(callback, time);
 			},
-			_readyStateChange:function(callback){
+			_readyStateChange: function(callback) {
 				var self = this;
 				callback = callback ? callback : this.oncomplete;
 				self.config.oncomplete = callback;
-				if (typeof callback == "string"){
+				if (typeof callback == "string") {
 					return;
 				}
 				//console.log(self.xhr.readyState+","+self.xhr.status+",responseText:"+self.xhr.responseText)
-				if (self.xhr.readyState == 0&&self.options&&self.options.oninit){
+				if (self.xhr.readyState == 0 && self.options && self.options.oninit) {
 					self.options.oninit();
 				}
-				if (self.xhr.readyState == 2&&self.options&&self.options.onsucceed){
+				if (self.xhr.readyState == 2 && self.options && self.options.onsucceed) {
 					self.options.onsucceed();
 				}
-				if (self.xhr.readyState == 4){
+				if (self.xhr.readyState == 4) {
 					self.xhr.onreadystatechange = null;
-	                var status = (self.xhr.status) ? parseFloat(self.xhr.status) || 0 : 0;
-	                if (status === 1223) {
-	                    status = 204;
-	                }
-	                if (status >= 200 && status < 300 || status == 304) {
-	                	callback({responseText:(this.isJson ? (function(){
-	            			try{
-	                			return eval("("+self.xhr.responseText+")");
-	                		}catch(e){
-	                			return e.message;
-	                		}
-	            		})() : self.xhr.responseText)},"ok");
-	                }else{
-	                	callback("","err");
-	                }
+					var status = (self.xhr.status) ? parseFloat(self.xhr.status) || 0 : 0;
+					if (status === 1223) {
+						status = 204;
+					}
+					if (status >= 200 && status < 300 || status == 304) {
+						callback({
+							responseText: (this.isJson ? (function() {
+								try {
+									return eval("(" + self.xhr.responseText + ")");
+								} catch (e) {
+									return e.message;
+								}
+							})() : self.xhr.responseText)
+						}, "ok");
+					} else {
+						callback("", "err");
+					}
 				}
 			},
-			formtojson:function(data){
+			formtojson: function(data) {
 				var elems = [];
-				jlpm.domFind(data).children().each(function(i,el){
+				jlpm.domFind(data).children().each(function(i, el) {
 					var name = el.name;
-					if (el.disabled || !name ) {return true;}
+					if (el.disabled || !name) {
+						return true;
+					}
 					switch (el.type) {
 						case "text":
 						case "hidden":
 						case "password":
 						case "textarea":
-							elems.push(encodeURIComponent(name)+"="+encodeURIComponent(el.value));
+							elems.push(encodeURIComponent(name) + "=" + encodeURIComponent(el.value));
 							break;
 						case "radio":
 						case "checkbox":
-							if (el.checked) {elems.push(encodeURIComponent(name)+"="+encodeURIComponent(el.value));}
+							if (el.checked) {
+								elems.push(encodeURIComponent(name) + "=" + encodeURIComponent(el.value));
+							}
 							break;
 						case "select-one":
-							if (el.selectedIndex > -1) {elems.push(encodeURIComponent(name)+"="+encodeURIComponent(el.value));}
+							if (el.selectedIndex > -1) {
+								elems.push(encodeURIComponent(name) + "=" + encodeURIComponent(el.value));
+							}
 							break;
 						case "select-multiple":
 							var opts = el.options;
 							for (var j = 0; j < opts.length; ++j) {
-								if (opts[j].selected) {elems.push(encodeURIComponent(name)+"="+encodeURIComponent(opts[j].value));}
+								if (opts[j].selected) {
+									elems.push(encodeURIComponent(name) + "=" + encodeURIComponent(opts[j].value));
+								}
 							}
 							break;
 					}
 				});
 				return elems.join('&');
 			},
-			tojson:function(data){
+			tojson: function(data) {
 				var elems = [];
-				jlpm.domFind(data).each(function(name,value){
+				jlpm.domFind(data).each(function(name, value) {
 					if (jlpm.isEmpty(value)) value = "";
 					if (jlpm.isArray(data[name])) {
-						jlpm.domFind(data[name]).each(function(i,svalue){
-							elems.push(encodeURIComponent(name)+"="+encodeURIComponent(svalue));
+						jlpm.domFind(data[name]).each(function(i, svalue) {
+							elems.push(encodeURIComponent(name) + "=" + encodeURIComponent(svalue));
 						});
-					}else{
-						elems.push(encodeURIComponent(name)+"="+encodeURIComponent(value));
+					} else {
+						elems.push(encodeURIComponent(name) + "=" + encodeURIComponent(value));
 					}
 				});
 				return elems.join('&');
 			},
-			stringtojson:function(data){
+			stringtojson: function(data) {
 				var elems = {};
-				jlpm.domFind(data.split('&')).each(function(i,obj){
+				jlpm.domFind(data.split('&')).each(function(i, obj) {
 					var array = obj.split('='),
 						value = !array[1] ? "" : array[1];
 					elems[array[0]] = value;
 				});
 				return elems;
 			},
-			send:function(url, method, data, callback){
+			send: function(url, method, data, callback) {
 				var self = this;
 				url = url ? url : self.url;
 				url = url.split('#')[0];
@@ -2841,65 +2832,65 @@
 				if (typeof data == "string" && method != 'post') {
 					url += (url.indexOf('?') != -1 ? '&' : '?') + data;
 				}
-				if (typeof data == "object"){
-					data = data.tagName&&data.tagName.toLowerCase()=="form" ? self.formtojson(data) : self.tojson(data);
+				if (typeof data == "object") {
+					data = data.tagName && data.tagName.toLowerCase() == "form" ? self.formtojson(data) : self.tojson(data);
 				}
 				var newConfig = {
-					url:url,
-					method:method,
-					data:data
+					url: url,
+					method: method,
+					data: data
 				},
 				result = self.oninit(self.stringtojson(data));
-				if (result.status&&!jlpm.isCdomain(url)){
-					jlpm.extend(newConfig,self.config);
-					var id = jlpm._ajaxID+1;
+				if (result.status && !jlpm.isCdomain(url) && !jlpm.isEmpty(url)) {
+					jlpm.extend(newConfig, self.config);
+					var id = jlpm._ajaxID + 1;
 					if (typeof data == "string" && method != 'post') {
-						url += (url.indexOf('?') != -1 ? '&' : '?') + "ajaxid=jlpm_ajax"+id;
+						url += (url.indexOf('?') != -1 ? '&' : '?') + "ajaxid=jlpm_ajax" + id;
 						self.config.url = url;
 					}
-					jlpm.ajaxhandlers["jlpm_ajax"+id] = self.config;
-					jlpm.ajaxhandlers._count +=1;
-					self.user ? self.xhr.open(method,url,self.async,self.user,self.pwd) : self.xhr.open(method,url,self.async);
+					jlpm.ajaxhandlers["jlpm_ajax" + id] = self.config;
+					jlpm.ajaxhandlers._count += 1;
+					!jlpm.isEmpty(self.user) ? self.xhr.open(method, url, self.async, self.user, self.pwd) : self.xhr.open(method, url, self.async);
 					for (var i in self.requestHeaders) {
 						self.xhr.setRequestHeader(i, self.requestHeaders[i]);
 					}
-					self.xhr.onreadystatechange = function(){
+					self.xhr.onreadystatechange = function() {
 						self._readyStateChange(callback);
 					};
 					if (self.async) {
-						self._sto(function(){
+						self._sto(function() {
 							self.cancel("timeout");
-						},self.timeout);
-						data&&method!="get" ? self.xhr.send(data) : self.xhr.send();
-					}else{
+						}, self.timeout);
+						data && method != "get" ? self.xhr.send(data) : self.xhr.send();
+					} else {
 
 					}
-				}else{
-					self.onerror(jlpm.isCdomain(url) ? "cross domain error!" :result.info);
+				} else {
+					self.onerror(jlpm.isCdomain(url) ? "cross domain error!" : result.info);
 				}
 			},
 			isWork: function() {
 				var state = this.xhr ? this.xhr.readyState : 0;
 				return state > 0 && state < 4;
 			},
-			cancel:function(info){
-				if (this.xhr&&this.isWork()){
+			cancel: function(info) {
+				if (this.xhr && this.isWork()) {
 					this.xhr.abort();
 					this._readyStateChange(info);
 					return true;
 				}
 				return false;
 			},
-			get:function(url,data,callback){
-				this.send(url,"get",data,callback);
+			get: function(url, data, callback) {
+				this.send(url, "get", data, callback);
 			},
-			post:function(url,data,callback){
-				this.send(url,"post",data,callback);
+			post: function(url, data, callback) {
+				this.send(url, "post", data, callback);
 			}
 		};
 		ajax.fn.init.prototype = ajax.fn;
 		return ajax(options);
-	},"Ajax");
+	}, "Ajax");
 	//localStorage
 	jlpm.extend({
 		cacheHname: location.hostname ? location.hostname : 'localStorage_jlpm',
@@ -3285,7 +3276,7 @@
 				a.push(self.eq(/0/.test(i + "") ? 0 : (self.children(m)[0] ? self.children(m)[0].length - 1 : 0), self.children(m)[0]));
 			} else {
 				this.each(m, function(obj) {
-					a.push(self.eq(/0/.test(i + "") ? 0 : (self.children(obj)[0] ? self.children(obj)[0].length - 1 : 0), obj));
+					a.push(self.eq(/0/.test(i + "") ? 0 : self.length - 1, obj));
 				});
 			}
 			if (this.isSingle(a)) a = a[0];
@@ -3307,26 +3298,6 @@
 			height: height || 0,
 			top: top || 0,
 			left: left || 0
-		};
-	};
-	//取对象的同父下一个标签和上一个标签及所有标签、标签内第一个标签和最后一个标签及所有标签、所有父标签
-	jlpm.fn.elems = function(selector,m){
-		var m = m ? m : this[0],
-			next = this.domFind(m).next()[0],
-			prev = this.domFind(m).prev()[0],
-			first = this.domFind(m).first()[0],
-			last = this.domFind(m).last()[0],
-			siblings = this.domFind(m).siblings()[0],
-			children = this.domFind(m).children()[0],
-			parents = selector ? this.domFind(m).parents(selector)[0] : this.domFind(m).parents()[0];
-		return {
-			next:next,
-			prev:prev,
-			first:first,
-			last:last,
-			siblings:siblings,
-			children:children,
-			parents:parents
 		};
 	};
 
