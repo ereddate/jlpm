@@ -1,5 +1,5 @@
 ;(function(win) {
-  var doc = win.document,
+	var doc = win.document,
 		_toString = Object.prototype.toString,
 		hasOwn = Object.prototype.hasOwnProperty,
 		docElem = doc.documentElement,
