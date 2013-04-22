@@ -360,14 +360,6 @@
 			});
 			return target;
 		},
-		delay: function(timeout) { //等待
-			var _method = this,
-				args = slice.call(arguments, 1),
-				timeout = timeout ? timeout : 1000;
-			return win.setTimeout(function() {
-				return args[0].apply(_method, args);
-			}, timeout);
-		},
 		hasAttr: function(name, m) { //是否包含此属性
 			var m = m ? m : this[0];
 			return m ? hasOwn.call(m, name) ? true : m[name] != undefined ? true : false : false;
@@ -651,6 +643,98 @@
 			return this;
 		}
 	});
+
+	//回调列表
+	jlpm.extend({
+		_callbacks: [],
+		_callbackLen: 0,
+		_callbacksFireNum: 0,
+		callbacks:function(){
+			var orderExec = function() {
+				return new orderExec.fn.init(arguments);
+			};
+			orderExec.fn = orderExec.prototype = {
+				constructor: orderExec,
+				init: function() {
+					var options = arguments||{};
+					this.orderExecSto = undefined;
+					this.time = 400;
+					if (options) jlpm.extend(this, options);
+					return this;
+				},
+				_add: function(callback) {
+					callback = callback ? callback : function() {};
+					jlpm._callbacks.push(function(fn) {
+						callback();
+						fn();
+					});
+					jlpm._callbackLen += 1;
+					return this;
+				},
+				add: function() {
+					return this._add.apply(this,arguments);
+				},
+				sto: function(callback, time) {
+					clearTimeout(this.orderExecSto);
+					this.orderExecSto = setTimeout(callback, time);
+				},
+				defer: function(callback, time) {
+					if (jlpm.isFunction(callback)) {
+						time = time ? time : 600;
+					}
+					if (callback == undefined || jlpm.isNumeric(callback)) {
+						time = callback ? callback : 600;
+					}
+					jlpm._callbacks.splice(jlpm._callbackLen, 0, function() {
+						var self = this;
+						if (jlpm.isFunction(callback)) {
+							callback();
+						}
+						self.sto(function() {
+							self.nextto((jlpm._callbacksFireNum + 1 > jlpm._callbackLen ? 0 : jlpm._callbacksFireNum + 1), self.orderExecfnNext);
+						}, time);
+					});
+					jlpm._callbackLen += 1;
+					return this;
+				},
+				orderExecfnNext: function(i) {
+					if (i + 1 < jlpm._callbackLen) {
+						this.nextto(i + 1, this.orderExecfnNext);
+					}else{
+						this.clear();
+					}
+				},
+				fire: function() {
+					if (jlpm._callbackLen > 0) {
+						this.nextto(0, this.orderExecfnNext);
+					}
+					return this;
+				},
+				nextto: function(i, callback) {
+					var self = this;
+					jlpm._callbacksFireNum = i;
+					self.sto(function() {
+						if (jlpm._callbackLen > 0) {
+							if (jlpm._callbacks[i]) {
+								jlpm._callbacks[i].call(self, function() {
+									callback.call(self, i);
+								});
+							}
+						}
+					}, i==0 ? 0 : self.time);
+				},
+				clear: function() {
+					jlpm._callbacks = [];
+					jlpm._callbackLen = 0;
+					jlpm._callbacksFireNum = 0;
+					return this;
+				}
+			};
+			orderExec.fn.init.prototype = orderExec.fn;
+			return orderExec.call(this, arguments);
+		}
+	});
+
 	jlpm.Doms._count = 0;
 	jlpm.sMatch.core_pnum = /[+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|)/.source;
 	jlpm.sMatch.rnumnonpx = (function(v) {
@@ -662,7 +746,6 @@
 	jlpm.each("Boolean Number String Function Array Date RegExp Object".split(" "), function(i, name) {
 		jlpm.class2type["[object " + name + "]"] = name.toLowerCase();
 	});
-
 
 	jlpm.fn.extend({
 		ready: function(callback) {
