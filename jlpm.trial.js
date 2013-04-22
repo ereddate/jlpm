@@ -1,6 +1,6 @@
 ;
 (function(win) {
-  var doc = win.document,
+	var doc = win.document,
 		_toString = Object.prototype.toString,
 		hasOwn = Object.prototype.hasOwnProperty,
 		docElem = doc.documentElement,
@@ -89,7 +89,7 @@
 			--i;
 		}
 		if (jlpm.fn.isFunction(arguments[1]) && jlpm.fn.isString(arguments[0])) {
-			target = jlpm.fn;
+			target = this;
 			target[arguments[0]] = arguments[1];
 		} else if (jlpm.fn.isFunction(arguments[1]) && jlpm.isPO(arguments[0])) {
 			target = this;
@@ -216,6 +216,10 @@
 			big0num: /^\d+$/,
 			rsingleTag: /^<(\w+)\s*\/?>(?:<\/\1>)?$/,
 			ScriptFragment: /<script[^>]*>([\\S\\s]*?)<\/script>/
+		},
+		class2type: {},
+		type: function(v) {
+			return v == null ? String(v) : this.class2type[_toString.call(v)] || "object";
 		},
 		record: function(old, ev, content, length, selector) {
 			var df = {
@@ -418,7 +422,7 @@
 		isElement: function(v) {
 			var nodecol = ",a,abbr,acronym,address,applet,area,b,base,basefont,bdo,big,blockquote,body,br,button,caption,center,cite,code,col,colgroup,dd,del,dir,div,dfn,dl,dt,em,fieldset,font,form,frame,frameset,h1,h2,h3,h4,h5,h6,head,hr,html,i,iframe,img,input,ins,isindex,kbd,label,legend,li,link,map,menu,meta,noframes,noscript,object,ol,optgroup,option,p,param,pre,q,s,samp,script,select,small,span,strike,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th, thead,title,tr,tt,u,ul,var,item,pubDate,author,description,";
 			nodecol += "abbr,figcaption,mark,output,summary,article,aside,audio,canvas,command,hgroup,datagrid,datalist,datatemplate,details,dialog,embed,event-source,figure,footer,header,m,meter,nav,nest,output,progress,rule,section,time,video,", isNbool = false;
-			return this.isString(v) && nodecol.indexOf("," + v.toLowerCase() + ",") > -1 && v.nodeType == 1 || v.nodeType == 1 ? true : false;
+			return this.isString(v) && nodecol.indexOf("," + v.toLowerCase() + ",") > -1 && v.nodeType == 1 || v.nodeType == 1 || v == doc || v == win ? true : false;
 		},
 		isHash: function(v) {
 			var m = m ? m : this[0];
@@ -645,7 +649,7 @@
 				this.record(gold, this.oldElement, null, null);
 			}
 			return this;
-		},
+		}
 	});
 	jlpm.Doms._count = 0;
 	jlpm.sMatch.core_pnum = /[+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|)/.source;
@@ -655,6 +659,10 @@
 	jlpm.sMatch.rnumsplit = (function(v) {
 		return new RegExp("^(" + v + ")(.*)$", "i");
 	})(jlpm.sMatch.core_pnum);
+	jlpm.each("Boolean Number String Function Array Date RegExp Object".split(" "), function(i, name) {
+		jlpm.class2type["[object " + name + "]"] = name.toLowerCase();
+	});
+
 
 	jlpm.fn.extend({
 		ready: function(callback) {
@@ -924,10 +932,10 @@
 					url = url.split('#')[0];
 					method = method ? method : self.method;
 					var data = jlpm.isEmpty(self.data) ? undefined : self.data;
-					if (typeof data == "object") {
+					if (jlpm.type(data) == "object") {
 						data = data.tagName && data.tagName.toLowerCase() == "form" ? self.formtojson(data) : self.tojson(data);
 					}
-					if (typeof data == "string" && method != 'post') {
+					if (jlpm.type(data) == "string" && method != 'post') {
 						url += (url.indexOf('?') != -1 ? '&' : '?') + data;
 					}
 					self.oncomplete = callback ? callback : self.oncomplete;
@@ -941,7 +949,7 @@
 					if (result.status && !jlpm.isCdomain(url) && !jlpm.isEmpty(url)) {
 						jlpm.extend(self.config, newConfig);
 						var id = jlpm._ajaxID++;
-						if (typeof data == "string" && method != 'post') {
+						if (jlpm.type(data) == "string" && method != 'post') {
 							url += (url.indexOf('?') != -1 ? '&' : '?') + "ajaxid=jlpm_ajax" + id;
 							self.config.url = url;
 						}
@@ -1039,37 +1047,13 @@
 				}
 			}
 			return true;
-		}
-	});
-	jlpm.fn.extend({
-		cacheDataDom: null,
-		cache: function(key, value) {
-			if (!jlpm.isNumeric(key) && jlpm.isEmpty(key)) {
-				return this._cacheLen();
-			} else {
-				if (!jlpm.isEmpty(value)) {
-					this._cacheSet(key, value);
-					return this;
-				} else if (jlpm.isNumeric(key)) {
-					return this._cacheKey(key + "");
-				} else {
-					return this._cacheGet(key) || undefined;
-				}
-			}
-		},
-		cacheRemove: function(key) {
-			if (jlpm.isEmpty(key)) {
-				return this._cacheClear();
-			} else {
-				return this._cacheRemove(key);
-			}
 		},
 		_cacheSet: function(key, value) {
 			if (this.isFunction(key)) {
-				return this.set(key.call(), value);
+				this._cacheSet(key.call(), value);
 			}
 			if (this.isFunction(value)) {
-				return this.set(key, value.call());
+				this._cacheSet(key, value.call());
 			}
 			if (jlpm.isLocalStorage) {
 				var key = this.isString(key) ? key.split(' ') : key,
@@ -1091,11 +1075,10 @@
 					doc.body.removeChild(this.cacheDataDom);
 				}
 			}
-			return this;
 		},
 		_cacheGet: function(key) {
 			if (this.isFunction(key)) {
-				return this.get(key.call());
+				return this._cacheGet(key.call());
 			}
 			if (jlpm.isLocalStorage) {
 				var rvalue = null,
@@ -1130,12 +1113,14 @@
 					}
 					doc.body.removeChild(this.cacheDataDom);
 					return rvalue;
+				}else{
+					return undefined;
 				}
 			}
 		},
 		_cacheRemove: function(key) {
 			if (this.isFunction(key)) {
-				return this.remove(key.call());
+				this._cacheRemove(key.call());
 			}
 			if (jlpm.isLocalStorage) {
 				if (key) {
@@ -1166,7 +1151,6 @@
 					doc.body.removeChild(this.cacheDataDom);
 				}
 			}
-			return this;
 		},
 		_cacheKey: function(index) {
 			if (jlpm.isLocalStorage) {
@@ -1222,6 +1206,30 @@
 					this.cacheDataDom.save(this.cacheHname);
 					doc.body.removeChild(this.cacheDataDom);
 				}
+			}
+		},
+		cacheDataDom: null
+	});
+	jlpm.fn.extend({
+		cache: function(key, value) {
+			if (!jlpm.isNumeric(key) && jlpm.isEmpty(key)) {
+				return jlpm._cacheLen();
+			} else {
+				if (!jlpm.isEmpty(value)) {
+					jlpm._cacheSet(key, value);
+					return this;
+				} else if (jlpm.isNumeric(key)) {
+					return jlpm._cacheKey(key + "");
+				} else {
+					return jlpm._cacheGet(key) || undefined;
+				}
+			}
+		},
+		cacheRemove: function(key) {
+			if (jlpm.isEmpty(key)) {
+				jlpm._cacheClear();
+			} else {
+				jlpm._cacheRemove(key);
 			}
 			return this;
 		}
@@ -1703,7 +1711,7 @@
 			// data from the HTML5 data-* attribute
 			if (data === undefined && elem.nodeType === 1) {
 				data = elem.getAttribute("data-" + key.replace(self.sMatch.rmultiDash, "$1-$2").toLowerCase());
-				if (typeof data === "string") {
+				if (jlpm.type(data) === "string") {
 					try {
 						data = data === "true" ? true : data === "false" ? false : data === "null" ? null : !this.isNaN(data) ? parseFloat(data) : self.sMatch.rbrace.test(data) ? this.parseJSON(data) : data;
 					} catch (e) {}
@@ -1721,10 +1729,10 @@
 		},
 		_getAttr: function(name, value, m) {
 			var self = this;
-			if (typeof name == "string") {
+			if (jlpm.type(name) == "string") {
 				var values = [],
 					names = name.split(' ');
-				if (!this.isEmpty(value) && typeof value == "string") {
+				if (!this.isEmpty(value) && jlpm.type(value) == "string") {
 					values = value.split(' ');
 					this.each(names, function(i, name) {
 						if (self.isSingle(names)) {
@@ -1801,13 +1809,13 @@
 					values.push(jlpm._getAttr(name, value, obj));
 				}
 			});
-			return typeof value != "undefined" ? this : values;
+			return jlpm.type(value) != "undefined" ? this : values;
 		},
 		removeAttr: function(name, m) {
 			var self = this,
 				m = m ? m : jlpm[0];
 			if (!jlpm.isEmpty(m)) {
-				if (typeof m == "object") {
+				if (jlpm.type(m) == "object") {
 					if (m.length) {
 						jlpm.each(m, function() {
 							jlpm._removeAttr(this, name);
@@ -1827,15 +1835,33 @@
 	//样式
 	if (win.getComputedStyle) {
 		jlpm.getStyles = function(elem) {
-			return win.getComputedStyle(elem, null);
+			try{
+				return win.getComputedStyle(elem, null);
+			}catch(e){
+				return undefined;
+			}
 		};
 	} else if (docElem.currentStyle) {
 		jlpm.getStyles = function(elem) {
-			return elem.currentStyle;
+			try{
+				return elem.currentStyle;
+			}catch(e){
+				return undefined;
+			}
 		};
 	}
 	jlpm.extend({
 		classCache: [],
+		hasClass: function(value, m) {
+			var m = m ? m : jlpm[0],
+				selector = value ? value : "",
+				className = " " + selector + " ",
+				hasArray = [];
+			jlpm.each(m, function() {
+				hasArray.push((this.nodeType === 1 && (" " + this.className + " ").replace(jlpm.sMatch.rclass, " ").indexOf(className) > -1) ? true : false);
+			});
+			return this.isSingle(hasArray) ? hasArray[0] : hasArray;
+		},
 		isHidden: function(v) {
 			var v = v ? v : this[0];
 			return jlpm(v).css("display") === "none" || !this.contains(elem.ownerDocument, elem);
@@ -1863,7 +1889,7 @@
 		},
 		_getCss: function(name, value, m) {
 			var self = this;
-			if (typeof name == "string") {
+			if (jlpm.type(name) == "string") {
 				var values = [],
 					names = name.split(' '),
 					fo = /filter|opacity/;
@@ -1887,9 +1913,9 @@
 					this.each(names, function(i, name) {
 						name = name === "float" ? ('getComputedStyle' in win ? 'cssFloat' : 'styleFloat') : name;
 						if (fo.test(name.toLowerCase())) {
-							values.push(self.getStyles(m)[name]);
+							values.push((self.getStyles(m) ? self.getStyles(m)[name] : undefined) || self._cssOpacity(m));
 						} else {
-							values.push(self.getStyles(m)[name] || m.style[name]);
+							values.push((self.getStyles(m) ? self.getStyles(m)[name] : undefined) || m["offset" + jlpm.propfx[name]] || (m.style ? m.style[name] : undefined));
 						}
 					});
 					return this.isEmpty(values) ? false : values;
@@ -1958,7 +1984,7 @@
 					jlpm(this).addClass(value.call(this, j, this.className));
 				});
 			}
-			if (value && typeof value === "string") {
+			if (value && jlpm.type(value) === "string") {
 				classNames = value.split(jlpm.sMatch.rspace);
 				if (m.length) {
 					jlpm.each(m, function() {
@@ -2004,7 +2030,7 @@
 					jlpm(this).removeClass(value.call(this, j, this.className));
 				});
 			}
-			if ((value && typeof value === "string") || value === undefined) {
+			if ((value && jlpm.type(value) === "string") || value === undefined) {
 				classNames = (value || "").split(jlpm.sMatch.rspace);
 				if (m.length) {
 					jlpm.each(m, function() {
@@ -2048,17 +2074,6 @@
 				});
 			});
 			return this;
-		},
-		hasClass: function(value, m) {
-			var m = m ? m : jlpm[0],
-				selector = value ? value : "",
-				className = " " + selector + " ",
-				hasArray = [],
-				self = this;
-			jlpm.each(m, function() {
-				hasArray.push((this.nodeType === 1 && (" " + this.className + " ").replace(jlpm.sMatch.rclass, " ").indexOf(className) > -1) ? true : false);
-			});
-			return this.isSingle(hasArray) ? hasArray[0] : hasArray;
 		},
 		show: function(lineBool, m) {
 			var m = m ? m : jlpm[0],
@@ -2227,11 +2242,11 @@
 		},
 		index: function(value, m) { //当前标签的组中INDEX或组总长度
 			var m = m ? m : this[0];
-			return m != null && m.length ? value ? (typeof value == "string") ? this.inArray(this.domFind(value)[0], m) : this.inArray(value, m) : (m.length) ? m.length : 0 : 0;
+			return m != null && m.length ? value ? (jlpm.type(value) == "string") ? this.inArray(this.domFind(value)[0], m) : this.inArray(value, m) : (m.length) ? m.length : 0 : 0;
 		},
 		gWin: function(elem) {
 			elem = elem ? elem : this[0];
-			return typeof elem === "object" && "setInterval" in elem ? elem : elem.nodeType === 9 ? elem.defaultView || elem.parentWindow : false;
+			return jlpm.type(elem) === "object" && "setInterval" in elem ? elem : elem.nodeType === 9 ? elem.defaultView || elem.parentWindow : false;
 		}
 	});
 	jlpm.fn.extend({
@@ -2489,7 +2504,7 @@
 								self.domFind(this).replace(s.call(this, m));
 							});
 						} else {
-							sm = (typeof s === "string") ? jlpm.crDom(s) : s;
+							sm = (jlpm.type(s) === "string") ? jlpm.crDom(s) : s;
 							jlpm.each(m, function() {
 								var parent = this.parentNode,
 									next = this.nextSibling;
@@ -2514,7 +2529,7 @@
 				self = this;
 			if (s != null) {
 				if (type === "df") {
-					if (typeof s === "string") {
+					if (jlpm.type(s) === "string") {
 						var sm = jlpm.crDom(s);
 						jlpm.each(m, function() {
 							if (this.parentNode) {
@@ -2542,7 +2557,7 @@
 					}
 				}
 				if (type === "in") {
-					if (typeof s === "string") {
+					if (jlpm.type(s) === "string") {
 						var sm = jlpm.crDom(s);
 						jlpm.each(m, function() {
 							if (this.parentNode) {
@@ -2882,7 +2897,7 @@
 				// Fall back to computed then uncomputed css if necessary
 				val = jlpm(elem).css(name);
 				if (val < 0 || val == null) {
-					val = elem.style[name];
+					val = elem.style ? elem.style[name] : undefined;
 				}
 				// Computed unit is not pixels. Stop here and return.
 				if (this.sMatch.rnumnonpx.test(val)) {
@@ -2911,15 +2926,13 @@
 			var styles = extra && this.getStyles(elem);
 			return this.setPositiveNumber(elem, value, extra ? this.augmentOffset(
 			elem, name, extra, jlpm(elem).css("boxSizing") === "border-box", styles) : 0);
-		}
-	});
-	jlpm.fn.extend({
-		csshook: function(name, val, extra) {
+		},
+		csshook: function(name, val, extra, m) {
 			var self = this,
 				m = m ? m : jlpm[0];
-			if (val) {
+			if (typeof val != "undefined") {
 				jlpm.each(m, function(i, obj) {
-					self.domFind(obj).css(name, jlpm._setWH(obj, name, val, extra));
+					jlpm(obj).css(name, jlpm._setWH(obj, name, val, extra));
 				});
 				return this;
 			} else {
@@ -2939,8 +2952,15 @@
 		}
 	});
 	jlpm.each(["top", "left", "bottom", "right"], function(i, name) {
-		jlpm.fn.extend(name, function(val) {
-			return this.csshook(name, val);
+		jlpm.extend(name, function(val) {
+			var m = undefined;
+			if (jlpm.isElement(val)){
+				m = val;
+				val = undefined;
+			}else{
+				m = undefined;
+			}
+			return this.csshook(name, val, undefined, m);
 		});
 	}).each({
 		Height: "height",
@@ -2951,12 +2971,12 @@
 			content: type,
 			"": "outer" + name
 		}, function(defaultExtra, funcName) {
-			jlpm.fn.extend(funcName, function(value, margin, m) {
-				var chainable = arguments.length && (defaultExtra || typeof margin !== "boolean"),
+			jlpm.extend(funcName, function(value, margin, m) {
+				var chainable = arguments.length && (defaultExtra || jlpm.type(margin) !== "boolean"),
 					extra = defaultExtra || (margin === true || value === true ? "margin" : "border"),
-					m = m ? m : this[0],
+					m = m ? m : jlpm.isElement(value) ? value : this[0],
 					doc;
-				if (typeof m === "object" && "setInterval" in m) {
+				if (jlpm.type(m) === "object" && "setInterval" in m) {
 					// As of 5/8/2012 this will yield incorrect results for Mobile Safari, but there
 					// isn't a whole lot we can do. See pull request at this URL for discussion:
 					return m.document.documentElement["client" + name];
@@ -2968,7 +2988,7 @@
 					// unfortunately, this causes bug #3838 in IE6/8 only, but there is currently no good, small way to fix it.
 					return Math.max(m.body["scroll" + name], doc["scroll" + name], m.body["offset" + name], doc["offset" + name], doc["client" + name]);
 				}
-				return value == undefined ? this.domFind(m).csshook(type, undefined, extra) : this.domFind(m).csshook(type, value, extra);
+				return value == undefined||jlpm.isElement(value) ? jlpm.csshook(type, undefined, extra, m) : jlpm.csshook(type, value, extra, m);
 			});
 		});
 	}).each({
@@ -2978,14 +2998,14 @@
 		scrollHeight: ""
 	}, function(method, prop) {
 		var top = /Y/.test(prop);
-		jlpm.fn.extend(method, function(val) {
+		jlpm.extend(method, function(val) {
 			var m = m ? m : jlpm[0],
-				win = jlpm.gWin(m);
+				getwin = jlpm.gWin(m);
 			if (val === undefined) {
 				return win ? (prop in win) ? win[prop] : win.document.documentElement[method] : m[method];
 			}
-			if (win) {
-				win.scrollTo(!top ? val : this.domFind(win).scrollLeft(), top ? val : this.domFind(win).scrollTop());
+			if (getwin||val==win) {
+				win.scrollTo(!top ? val : jlpm.scrollLeft(getwin), top ? val : jlpm.scrollTop(getwin));
 			} else {
 				m[method] = val;
 			}
@@ -2994,11 +3014,11 @@
 
 	//取对象的宽、高、TOP、LEFT
 	jlpm.fn.size = function(m) {
-		var m = m ? m : this[0],
-			width = this.domFind(m).outerWidth(),
-			height = this.domFind(m).outerHeight(),
-			top = this.domFind(m).top(),
-			left = this.domFind(m).left();
+		var m = m ? m : jlpm[0],
+			width = jlpm.outerWidth(m),
+			height = jlpm.outerHeight(m),
+			top = jlpm.top(m),
+			left = jlpm.left(m);
 		return {
 			width: width || 0,
 			height: height || 0,
@@ -3075,7 +3095,7 @@
 						m = jlpm[0],
 						swipe = function(elID, opts) {
 							var that = this;
-							if (typeof(elID) == "string") this.el = doc.getElementById(elID);
+							if (jlpm.type(elID) == "string") this.el = doc.getElementById(elID);
 							else this.el = elID
 							if (!this.el) {
 								alert("Error adding swipe listener for " + elID);
@@ -3152,7 +3172,7 @@
 								this.swipeDirection.down = this.movingY > 0;
 								swiped = true;
 							}
-							if (swiped && typeof(this.callBack == "function")) this.callBack.call(this.el, this.swipeDirection, Math.abs(this.movingY));
+							if (swiped && jlpm.type(this.callBack) == "function") this.callBack.call(this.el, this.swipeDirection, Math.abs(this.movingY));
 							event.preventDefault();
 							this.cancel();
 						}
@@ -3211,7 +3231,7 @@
 					new tap(callback);
 				}
 				return this;
-			},
+			}
 		});
 		jlpm.each(["doubletap", "singletap"], function(i, name) { //单双击TAP
 			jlpm.fn.extend(name, function(callback, m) {
